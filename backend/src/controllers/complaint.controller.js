@@ -1,0 +1,1 @@
+import complaintDB from '../models/complaint.model.js';

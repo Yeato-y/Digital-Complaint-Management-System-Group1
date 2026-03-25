@@ -1,16 +1,24 @@
 // organization.controller controller: handles HTTP request/response flow for this module.
 import bcrypt from 'bcrypt';
+import { randomBytes } from 'node:crypto';
 import complaintDB from '../model/connect.js';
 import { sendSuccess, sendError } from '../utils/response.js';
+import { logAuditEntry, buildAuditMetadata } from '../utils/audit.js';
 import {
   Organization,
   deleteOrganizationById,
   insertOrganization,
+  selectAnyOrganizationByJoinCode,
+  selectOrganizationByJoinCode,
   selectOrganizations,
   selectOrganizationById,
+  updateOrganizationJoinCodeById,
+  updateOrganizationStatusById,
+  updateOrganizationSelfSignupById,
   updateOrganizationById
 } from '../model/organization.model.js';
 import { createUserQuery, fetchUserByEmailQuery, fetchUserByIdQuery } from '../model/user.model.js';
+import { selectPublicDepartmentsByOrganizationId } from '../model/department.model.js';
 
 const DEFAULT_ORG_ADMIN_PASSWORD = process.env.ORG_ADMIN_DEFAULT_PASSWORD || 'Admin@123';
 
@@ -29,6 +37,36 @@ const allQuery = (sql, params = []) =>
       return resolve(rows || []);
     });
   });
+
+const generateJoinCode = () => randomBytes(4).toString('hex').toUpperCase();
+
+const generateUniqueJoinCode = async () => {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const candidate = generateJoinCode();
+    const existing = await getQuery(selectAnyOrganizationByJoinCode, [candidate]);
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  throw new Error('Failed to generate a unique join code');
+};
+
+const buildJoinCodePayload = (organizationRow) => {
+  const joinCode = String(organizationRow?.join_code || '').trim();
+  const joinBase = process.env.JOIN_CODE_URL_BASE || 'http://localhost:5173/signup?joinCode=';
+  const joinUrl = joinCode ? `${joinBase}${encodeURIComponent(joinCode)}` : '';
+  const qrUrl = joinUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(joinUrl)}`
+    : '';
+
+  return {
+    organization_id: organizationRow?.organization_id,
+    join_code: joinCode,
+    join_url: joinUrl,
+    join_qr_url: qrUrl
+  };
+};
 
 const buildLastTwelveMonths = () => {
   const months = [];
@@ -75,6 +113,8 @@ const getOrgAdminByOrganizationId = (organizationId, callback) => {
   );
 };
 
+const isUniqueConstraintError = (error) => /SQLITE_CONSTRAINT|UNIQUE constraint failed/i.test(String(error?.message || error || ''));
+
 const authorizeOrganizationOwnership = (req, res, organizationId, onAllowed) => {
   if (req.user?.role === 'super_admin') {
     onAllowed();
@@ -99,9 +139,78 @@ export const CreateOrganizationTable = () => {
   complaintDB.run(Organization, (err) => {
     if (err) {
       console.error('Error creating organization table:', err.message);
-    } else {
-      console.log('Organization table created or already exists');
+      return;
     }
+
+    complaintDB.all('PRAGMA table_info(organization)', [], async (schemaErr, columns) => {
+      if (schemaErr) {
+        console.error('Error inspecting organization table:', schemaErr.message);
+        return;
+      }
+
+      const existing = new Set((columns || []).map((column) => column.name));
+
+      try {
+        if (!existing.has('join_code')) {
+          await new Promise((resolve, reject) => {
+            complaintDB.run('ALTER TABLE organization ADD COLUMN join_code TEXT', (alterErr) => {
+              if (alterErr) return reject(alterErr);
+              return resolve();
+            });
+          });
+        }
+
+        await new Promise((resolve, reject) => {
+          complaintDB.run(
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_organization_join_code ON organization(join_code)',
+            (indexErr) => {
+              if (indexErr) return reject(indexErr);
+              return resolve();
+            }
+          );
+        });
+
+        if (!existing.has('self_signup_enabled')) {
+          await new Promise((resolve, reject) => {
+            complaintDB.run(
+              'ALTER TABLE organization ADD COLUMN self_signup_enabled INTEGER NOT NULL DEFAULT 1',
+              (alterErr) => {
+                if (alterErr) return reject(alterErr);
+                return resolve();
+              }
+            );
+          });
+        }
+
+        const rowsMissingJoinCode = await allQuery(
+          'SELECT organization_id FROM organization WHERE join_code IS NULL OR TRIM(join_code) = ""'
+        );
+
+        for (const row of rowsMissingJoinCode) {
+          const joinCode = await generateUniqueJoinCode();
+          await new Promise((resolve, reject) => {
+            complaintDB.run(updateOrganizationJoinCodeById, [joinCode, row.organization_id], (updateErr) => {
+              if (updateErr) return reject(updateErr);
+              return resolve();
+            });
+          });
+        }
+
+        await new Promise((resolve, reject) => {
+          complaintDB.run(
+            'UPDATE organization SET self_signup_enabled = COALESCE(self_signup_enabled, 1)',
+            (updateErr) => {
+              if (updateErr) return reject(updateErr);
+              return resolve();
+            }
+          );
+        });
+
+        console.log('Organization table created or already exists');
+      } catch (migrationErr) {
+        console.error('Error migrating organization table:', migrationErr.message);
+      }
+    });
   });
 };
 
@@ -129,7 +238,7 @@ const createOrganizationAdminAccount = (organizationId, payload, callback) => {
       const hashedPassword = await bcrypt.hash(DEFAULT_ORG_ADMIN_PASSWORD, 10);
       complaintDB.run(
         createUserQuery,
-        [organizationId, null, fullName, email, hashedPassword, 1, 1, 'active', 'org_admin'],
+        [organizationId, null, fullName, email, hashedPassword, 1, 'active', 'org_admin'],
         function onCreate(createErr) {
           if (createErr) {
             callback(createErr);
@@ -166,18 +275,36 @@ export const createOrganization = (req, res) => {
     return sendError(res, 400, 'admin_email is required to create an organization admin account');
   }
 
-  complaintDB.run(
-    insertOrganization,
-    [name, organization_type, email, phone, address, logo, status],
+  generateUniqueJoinCode().then((joinCode) => {
+    complaintDB.run(
+      insertOrganization,
+      [name, organization_type, email, phone, address, logo, status, joinCode, 1],
     function onCreate(err) {
       if (err) {
+        if (isUniqueConstraintError(err)) {
+          return sendError(res, 409, 'Organization email already exists');
+        }
         return sendError(res, 500, 'Failed to create organization', err.message);
       }
 
       const organizationId = this.lastID;
       createOrganizationAdminAccount(organizationId, req.body, (adminErr, adminRow) => {
         if (adminErr) {
-          return sendError(res, 500, 'Organization created but failed to create organization admin', adminErr.message);
+          complaintDB.run(deleteOrganizationById, [organizationId], (rollbackErr) => {
+            if (rollbackErr) {
+              return sendError(
+                res,
+                500,
+                'Organization created but failed to create organization admin',
+                `${adminErr.message}. Rollback also failed: ${rollbackErr.message}`
+              );
+            }
+            if (isUniqueConstraintError(adminErr) || /already exists/i.test(String(adminErr.message || adminErr))) {
+              return sendError(res, 409, 'Organization admin email already exists');
+            }
+            return sendError(res, 500, 'Failed to create organization admin', adminErr.message);
+          });
+          return;
         }
 
         complaintDB.get(selectOrganizationById, [organizationId], (getErr, row) => {
@@ -200,7 +327,8 @@ export const createOrganization = (req, res) => {
         });
       });
     }
-  );
+    );
+  }).catch((joinCodeErr) => sendError(res, 500, 'Failed to generate organization join code', joinCodeErr.message));
 };
 
 export const createOrganizationAdmin = (req, res) => {
@@ -226,6 +354,9 @@ export const createOrganizationAdmin = (req, res) => {
 
       createOrganizationAdminAccount(Number(req.params.id), req.body, (createErr, adminRow) => {
         if (createErr) {
+          if (isUniqueConstraintError(createErr) || /already exists/i.test(String(createErr.message || createErr))) {
+            return sendError(res, 409, 'Organization admin email already exists');
+          }
           return sendError(res, 500, 'Failed to create organization admin', createErr.message);
         }
         return sendSuccess(res, 201, 'Organization admin created successfully', {
@@ -375,7 +506,7 @@ export const getGlobalOrganizationStats = async (req, res) => {
   }
 
   try {
-    const [organizationStats, complaintStats, escalationStats, feedbackStats, recentOrganizations, complaintsByOrganization, complaintMonthlyRows, assessmentMonthlyRows] = await Promise.all([
+    const [organizationStats, complaintStats, escalationStats, feedbackStats, complaintsByOrganization, complaintMonthlyRows, assessmentMonthlyRows] = await Promise.all([
       getQuery(
         `
         SELECT
@@ -413,14 +544,6 @@ export const getGlobalOrganizationStats = async (req, res) => {
         FROM feedback
         GROUP BY rating
         ORDER BY rating ASC
-        `
-      ),
-      allQuery(
-        `
-        SELECT organization_id, name, status, created_at, updated_at
-        FROM organization
-        ORDER BY updated_at DESC, organization_id DESC
-        LIMIT 8
         `
       ),
       allQuery(
@@ -516,10 +639,6 @@ export const getGlobalOrganizationStats = async (req, res) => {
       assessmentMonthlyTrend: lastTwelveMonths.map((month) => ({
         month: month.label,
         value: assessmentMonthlyMap.get(month.key) || 0
-      })),
-      activityFeed: recentOrganizations.map((row) => ({
-        text: `Organization ${row.name} is ${row.status}`,
-        date: row.updated_at || row.created_at || null
       }))
     });
   } catch (error) {
@@ -566,6 +685,124 @@ export const updateOrganization = (req, res) => {
         });
       }
     );
+  });
+};
+
+export const regenerateOrganizationJoinCode = (req, res) => {
+  authorizeOrganizationOwnership(req, res, req.params.id, async () => {
+    try {
+      const organizationRow = await getQuery(selectOrganizationById, [req.params.id]);
+      if (!organizationRow) {
+        return sendError(res, 404, 'Organization not found');
+      }
+
+      const joinCode = await generateUniqueJoinCode();
+      complaintDB.run(updateOrganizationJoinCodeById, [joinCode, req.params.id], function onUpdate(err) {
+        if (err) {
+          return sendError(res, 500, 'Failed to regenerate join code', err.message);
+        }
+
+        complaintDB.get(selectOrganizationById, [req.params.id], (getErr, row) => {
+          if (getErr) {
+            return sendError(res, 500, 'Failed to fetch organization', getErr.message);
+          }
+          return sendSuccess(res, 200, 'Join code regenerated successfully', {
+            organization: row,
+            join_code: buildJoinCodePayload(row)
+          });
+        });
+      });
+    } catch (error) {
+      return sendError(res, 500, 'Failed to regenerate join code', error.message);
+    }
+  });
+};
+
+export const getOrganizationJoinCode = (req, res) => {
+  authorizeOrganizationOwnership(req, res, req.params.id, async () => {
+    try {
+      const organizationRow = await getQuery(selectOrganizationById, [req.params.id]);
+      if (!organizationRow) {
+        return sendError(res, 404, 'Organization not found');
+      }
+
+      if (!organizationRow.join_code || String(organizationRow.join_code).trim() === '') {
+        const joinCode = await generateUniqueJoinCode();
+        await new Promise((resolve, reject) => {
+          complaintDB.run(updateOrganizationJoinCodeById, [joinCode, req.params.id], (err) => {
+            if (err) return reject(err);
+            return resolve();
+          });
+        });
+        const refreshed = await getQuery(selectOrganizationById, [req.params.id]);
+        return sendSuccess(res, 200, 'Join code generated successfully', buildJoinCodePayload(refreshed));
+      }
+
+      return sendSuccess(res, 200, 'Join code retrieved successfully', buildJoinCodePayload(organizationRow));
+    } catch (error) {
+      return sendError(res, 500, 'Failed to fetch organization join code', error.message);
+    }
+  });
+};
+
+export const updateOrganizationSelfSignup = (req, res) => {
+  const selfSignupEnabled = req.body?.self_signup_enabled;
+  if (![0, 1, true, false, '0', '1', 'true', 'false'].includes(selfSignupEnabled)) {
+    return sendError(res, 400, 'self_signup_enabled must be a boolean value');
+  }
+
+  const normalized = selfSignupEnabled === true || selfSignupEnabled === 1 || selfSignupEnabled === '1' || selfSignupEnabled === 'true' ? 1 : 0;
+
+  authorizeOrganizationOwnership(req, res, req.params.id, () => {
+    complaintDB.run(updateOrganizationSelfSignupById, [normalized, req.params.id], function onUpdate(err) {
+      if (err) {
+        return sendError(res, 500, 'Failed to update self-signup setting', err.message);
+      }
+      complaintDB.get(selectOrganizationById, [req.params.id], (getErr, row) => {
+        if (getErr) {
+          return sendError(res, 500, 'Failed to fetch organization', getErr.message);
+        }
+        return sendSuccess(res, 200, 'Self-signup setting updated successfully', row);
+      });
+    });
+  });
+};
+
+export const updateOrganizationStatus = (req, res) => {
+  if (req.user?.role !== 'super_admin') {
+    return sendError(res, 403, 'Only super_admin can update organization status');
+  }
+
+  const status = String(req.body?.status || '').trim().toLowerCase();
+  if (!['active', 'inactive'].includes(status)) {
+    return sendError(res, 400, 'status must be active or inactive');
+  }
+
+  complaintDB.run(updateOrganizationStatusById, [status, req.params.id], function onUpdate(err) {
+    if (err) {
+      return sendError(res, 500, 'Failed to update organization status', err.message);
+    }
+    if (this.changes === 0) {
+      return sendError(res, 404, 'Organization not found');
+    }
+    complaintDB.get(selectOrganizationById, [req.params.id], (getErr, row) => {
+      if (getErr) {
+        return sendError(res, 500, 'Failed to fetch organization', getErr.message);
+      }
+      const auditMeta = buildAuditMetadata(req);
+      auditMeta.organization_id = row?.organization_id;
+      auditMeta.organization_name = row?.name;
+      auditMeta.new_status = row?.status;
+      void logAuditEntry(req, {
+        action: 'update_organization_status',
+        targetTable: 'organization',
+        targetId: row?.organization_id,
+        metadata: auditMeta
+      }).catch(() => {
+        console.error('Failed to record audit log for organization status update');
+      });
+      return sendSuccess(res, 200, 'Organization status updated successfully', row);
+    });
   });
 };
 
@@ -632,4 +869,36 @@ export const getPublicOrganizationOptions = (req, res) => {
       return sendSuccess(res, 200, 'Public organizations retrieved successfully', rows || []);
     }
   );
+};
+
+export const getPublicOrganizationJoinDetails = async (req, res) => {
+  const joinCode = String(req.params.code || '').trim().toUpperCase();
+
+  if (!joinCode) {
+    return sendError(res, 400, 'join code is required');
+  }
+
+  try {
+    const organizationRow = await getQuery(selectOrganizationByJoinCode, [joinCode]);
+    if (!organizationRow) {
+      return sendError(res, 404, 'Invalid join code');
+    }
+    if (!Number(organizationRow.self_signup_enabled ?? 1)) {
+      return sendError(res, 403, 'Self-signup is disabled for this organization');
+    }
+
+    const departments = await allQuery(selectPublicDepartmentsByOrganizationId, [organizationRow.organization_id]);
+    return sendSuccess(res, 200, 'Organization join details retrieved successfully', {
+      organization: {
+        organization_id: organizationRow.organization_id,
+        name: organizationRow.name,
+        organization_type: organizationRow.organization_type,
+        join_code: organizationRow.join_code,
+        self_signup_enabled: Number(organizationRow.self_signup_enabled ?? 1)
+      },
+      departments
+    });
+  } catch (error) {
+    return sendError(res, 500, 'Failed to fetch organization join details', error.message);
+  }
 };

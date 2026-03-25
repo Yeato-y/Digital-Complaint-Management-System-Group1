@@ -8,34 +8,33 @@ import AppFooter from '../components/AppFooter.vue';
   <div class="page-root flex min-h-screen w-screen flex-col">
     <AuthTopNav fixed />
 
-    <!-- ─── HERO ──────────────────────────────────────────────── -->
-    <section class="about-hero relative flex min-h-[52vh] items-end overflow-hidden pb-0">
-      <div class="hero-bg absolute inset-0 z-0"></div>
-      <div class="hero-gradient absolute inset-0 z-10"></div>
-      <div class="grid-lines absolute inset-0 z-10 opacity-[0.07]"></div>
+    <!-- Hero Section -->
+    <section class="hero-section relative flex items-center justify-center overflow-hidden pt-20">
+      <!-- Background overlay -->
+      <div class="hero-overlay absolute inset-0 z-10"></div>
 
-      <!-- Glow orbs -->
-      <div class="orb orb-a absolute z-10"></div>
-      <div class="orb orb-b absolute z-10"></div>
+      <!-- Decorative architectural line art -->
+      <div class="absolute inset-0 z-0">
+        <svg class="absolute bottom-0 left-0 w-full opacity-10" viewBox="0 0 1440 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0,160 L80,160 L80,80 L160,80 L160,160 L240,160 L240,40 L320,40 L320,160 L400,160 L400,100 L480,100 L480,160 L560,160 L560,60 L640,60 L640,160 L720,160 L720,120 L800,120 L800,160 L880,160 L880,50 L960,50 L960,160 L1040,160 L1040,90 L1120,90 L1120,160 L1200,160 L1200,70 L1280,70 L1280,160 L1360,160 L1360,110 L1440,110 L1440,320 L0,320 Z" fill="white"/>
+        </svg>
+      </div>
 
-      <div class="relative z-20 mx-auto w-full max-w-6xl px-6 pb-16 pt-36 sm:px-10 lg:px-16">
-        <!--<div class="animate-fade-down mb-4 inline-flex items-center gap-2.5 rounded-full border border-orange-400/30 bg-orange-500/10 px-5 py-2 backdrop-blur-sm">
-          <span class="h-2 w-2 animate-pulse rounded-full bg-orange-400"></span>
-          <span class="text-xs font-bold uppercase tracking-widest text-orange-300">About Us</span>
-        </div>-->
-        <h1 class="hero-h1 animate-fade-up text-5xl font-black leading-[0.93] text-white sm:text-6xl lg:text-7xl">
-          Built for People.<br/>
-          <span class="text-gradient">Driven by Accountability.</span>
+      <div class="relative z-20 mx-auto max-w-5xl px-6 py-20 text-center sm:py-28 lg:py-36">
+        <h1 class="hero-title text-5xl font-black leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-8xl">
+          Submit Your
+          <span class="block text-[#f97316]">Complaints.</span>
         </h1>
-        <p class="animate-fade-up animation-delay-200 mt-6 max-w-2xl text-base leading-7 text-blue-100/70 sm:text-lg">
-          ComplaintTrack is a civic technology platform designed to bridge the gap between citizens and the organizations that serve them — making complaint resolution transparent, fast, and dignified.
+
+        <p class="mx-auto mt-6 max-w-2xl text-base leading-7 text-blue-100/80 sm:text-lg">
+           A digital civic platform that allows citizens, students, and customers to report issues directly — and track every step of their resolution in real time.
         </p>
       </div>
 
       <!-- Wave divider -->
       <!--<div class="absolute bottom-0 left-0 right-0 z-20">
-        <svg viewBox="0 0 1440 70" preserveAspectRatio="none" class="w-full" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0,35 C480,70 960,0 1440,35 L1440,70 L0,70 Z" fill="#ffffff"/>
+        <svg viewBox="0 0 1440 80" preserveAspectRatio="none" class="w-full" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#f5f7fa"/>
         </svg>
       </div>-->
     </section>
@@ -75,8 +74,8 @@ import AppFooter from '../components/AppFooter.vue';
           </div>
 
           <!-- Visual block -->
-        <div class="relative">
-            <div class="mission-visual-card">
+      <div class="relative">
+           <!-- <div class="mission-visual-card">
               <div class="mv-inner">
                 <div class="mv-icon-row">
                   <div class="mv-icon bg-orange-100 text-orange-500">
@@ -112,16 +111,16 @@ import AppFooter from '../components/AppFooter.vue';
                     <div class="tl-dot bg-emerald-500"></div>
                     <div class="tl-bar bg-emerald-100"></div>
                     <span class="text-xs font-semibold text-emerald-700">✓ Resolved</span>
-                  </div>
-                </div>
+                  </div> 
+                </div> 
               </div>
             </div>
             <!-- Floating accent -->
-            <div class="floating-badge">
+            <!--<div class="floating-badge">
               <span class="text-2xl font-black text-emerald-600">98%</span>
               <span class="text-xs text-slate-400 font-medium">satisfaction</span>
-            </div>
-          </div>
+            </div> -->
+          </div>-->
         </div>
       </div>
     </section>
@@ -159,29 +158,29 @@ import AppFooter from '../components/AppFooter.vue';
             <p class="mt-2 text-sm leading-6 text-slate-500">Anonymous submission is a first-class feature. Your identity is never required when you need to speak up safely.</p>
           </div>
 
-          <div class="value-card group">
+         <!-- <div class="value-card group">
             <div class="value-icon bg-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white">
               <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
             <h3 class="mt-5 text-lg font-bold text-[#0f2444]">Speed</h3>
             <p class="mt-2 text-sm leading-6 text-slate-500">Direct routing means complaints reach the right desk immediately — not after bouncing through three departments.</p>
-          </div>
+          </div>-->
 
-          <div class="value-card group">
+          <!--<div class="value-card group">
             <div class="value-icon bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white">
               <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </div>
             <h3 class="mt-5 text-lg font-bold text-[#0f2444]">Inclusivity</h3>
             <p class="mt-2 text-sm leading-6 text-slate-500">Designed for citizens, students, and customers across all backgrounds. Clear language, simple forms, no barriers.</p>
-          </div>
+          </div>-->
 
-          <div class="value-card group">
+         <!-- <div class="value-card group">
             <div class="value-icon bg-rose-100 text-rose-500 group-hover:bg-rose-500 group-hover:text-white">
               <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
             </div>
             <h3 class="mt-5 text-lg font-bold text-[#0f2444]">Dignity</h3>
             <p class="mt-2 text-sm leading-6 text-slate-500">Every user deserves to be heard respectfully. The interface and process are designed to reduce stress, not add to it.</p>
-          </div>
+          </div>-->
         </div>
       </div>
     </section>
@@ -225,36 +224,55 @@ import AppFooter from '../components/AppFooter.vue';
     </section>-->
 
     <!-- ─── TEAM ──────────────────────────────────────────────── -->
-    <section class="bg-white px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
-      <div class="mx-auto max-w-5xl">
-        <div class="mb-14 text-center">
-          <p class="section-kicker">The Team</p>
-          <h2 class="section-title mt-2">The People Behind<br/>ComplaintTrack</h2>
-          <p class="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500">A small, focused team of technologists and civic-minded builders committed to making accountability accessible to everyone.</p>
-        </div>
+<section class="bg-white px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
+  <div class="mx-auto max-w-5xl">
+    <div class="mb-14 text-center">
+      <p class="section-kicker">The Team</p>
+      <h2 class="section-title mt-2">The People Behind<br/>ComplaintTrack</h2>
+      <p class="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500">A small, focused team of technologists and civic-minded builders committed to making accountability accessible to everyone.</p>
+    </div>
 
-        <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          <div class="team-card">
-            <div class="team-avatar" style="background: linear-gradient(135deg,#f97316,#fb923c)">JK</div>
-            <h3 class="mt-4 text-base font-bold text-[#0f2444]">James Kollie</h3>
-            <p class="text-sm font-medium text-orange-500">Founder & Lead Developer</p>
-            <p class="mt-2 text-xs leading-6 text-slate-500">Built the core platform architecture and is passionate about civic tech solving real problems for everyday Liberians.</p>
-          </div>
-          <div class="team-card">
-            <div class="team-avatar" style="background: linear-gradient(135deg,#0284c7,#38bdf8)">SF</div>
-            <h3 class="mt-4 text-base font-bold text-[#0f2444]">Sarah Flomo</h3>
-            <p class="text-sm font-medium text-sky-600">UX & Product Design</p>
-            <p class="mt-2 text-xs leading-6 text-slate-500">Leads the user experience to ensure the platform is accessible, calm, and frustration-free for every type of user.</p>
-          </div>
-          <div class="team-card">
-            <div class="team-avatar" style="background: linear-gradient(135deg,#7c3aed,#a78bfa)">MP</div>
-            <h3 class="mt-4 text-base font-bold text-[#0f2444]">Marcus Pewee</h3>
-            <p class="text-sm font-medium text-violet-600">Backend & Systems</p>
-            <p class="mt-2 text-xs leading-6 text-slate-500">Manages data security, routing logic, and the admin infrastructure that keeps organizations on track.</p>
-          </div>
-        </div>
+    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+
+      <!-- Card 1 — real photo -->
+      <div class="team-card">
+        <img
+          src="/images/yeato.jpeg"
+          alt="Yeato Yowah"
+          class="team-avatar-img"
+        />
+        <h3 class="mt-4 text-base font-bold text-[#0f2444]">Yeato Yowah</h3>
+        <p class="text-sm font-medium text-orange-500">Group Head</p>
+        <p class="mt-2 text-xs leading-6 text-slate-500">Built the core platform architecture and is passionate about civic tech solving real problems for everyday Liberians.</p>
       </div>
-    </section>
+
+      <!-- Card 2 — initials until photo is ready -->
+      <div class="team-card">
+        <img
+          src="/images/yeato.jpeg"
+          alt="Yeato Yowah"
+          class="team-avatar-img"
+        />
+        <h3 class="mt-4 text-base font-bold text-[#0f2444]">Yeato Yowah</h3>
+        <p class="text-sm font-medium text-sky-600">UX & Product Design</p>
+        <p class="mt-2 text-xs leading-6 text-slate-500">Leads the user experience to ensure the platform is accessible, calm, and frustration-free for every type of user.</p>
+      </div>
+
+      <!-- Card 3 — initials until photo is ready -->
+      <div class="team-card">
+        <img
+          src="/images/yeato.jpeg"
+          alt="Yeato Yowah"
+          class="team-avatar-img"
+        />
+        <h3 class="mt-4 text-base font-bold text-[#0f2444]">Yeato Yowah</h3>
+        <p class="text-sm font-medium text-violet-600">Backend & Systems</p>
+        <p class="mt-2 text-xs leading-6 text-slate-500">Manages data security, routing logic, and the admin infrastructure that keeps organizations on track.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
 
     <!-- ─── CTA ───────────────────────────────────────────────── -->
     <!--<section class="cta-section relative overflow-hidden px-6 py-24 sm:px-10 lg:px-16">
@@ -290,18 +308,16 @@ import AppFooter from '../components/AppFooter.vue';
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
-.page-root { font-family: 'DM Sans', sans-serif; }
+.page-root { font-family: 'Times New Roman', Times, serif; }
 
 /* ── Hero ──────────────────────────────────── */
-.about-hero { background-color: #0b1a33; }
-.hero-bg {
-  background-image: url('https://images.unsplash.com/photo-1568992687947-868a62a9f521?w=1600&q=80');
+.hero-section {
+  min-height: 500px;
+    background-image: url('https://images.unsplash.com/photo-1573497620053-ea5300f94f21?w=1600&q=80');
   background-size: cover;
   background-position: center top;
 }
-.hero-gradient {
+.hero-overlay {
   background: linear-gradient(135deg, rgba(10,28,64,0.88) 0%, rgba(15,52,100,0.82) 50%, rgba(30,60,110,0.75) 100%);
 }
 .grid-lines {
@@ -320,10 +336,9 @@ import AppFooter from '../components/AppFooter.vue';
   background: radial-gradient(circle, rgba(56,189,248,0.12), transparent 70%);
 }
 .hero-h1 {
-  font-family: 'Georgia', 'Times New Roman', serif;
+  font-family: 'Times New Roman', Times, serif;
   letter-spacing: -0.02em;
 }
-
 /* ── Animations ────────────────────────────── */
 @keyframes fade-down {
   from { opacity: 0; transform: translateY(-16px); }
@@ -343,7 +358,7 @@ import AppFooter from '../components/AppFooter.vue';
   letter-spacing: 0.24em; text-transform: uppercase; color: #f97316;
 }
 .section-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Times New Roman', Times, serif;
   font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 900;
   color: #0f2444; line-height: 1.1;
 }
@@ -352,7 +367,7 @@ import AppFooter from '../components/AppFooter.vue';
   letter-spacing: 0.24em; text-transform: uppercase; color: #fb923c;
 }
 .section-title-light {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Times New Roman', Times, serif;
   font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 900;
   color: white; line-height: 1.1;
 }
@@ -365,7 +380,7 @@ import AppFooter from '../components/AppFooter.vue';
   background: #f8fafc;
 }
 .mission-stat-num {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Times New Roman', Times, serif;
   font-size: 2rem; font-weight: 900; line-height: 1;
 }
 .mission-stat-label {
@@ -377,6 +392,7 @@ import AppFooter from '../components/AppFooter.vue';
   border: 1px solid rgba(15,36,68,0.08);
   background: white;
   box-shadow: 0 8px 50px rgba(15,36,68,0.10);
+  
   padding: 2px;
 }
 .mv-inner { padding: 2rem; border-radius: calc(2rem - 2px); }
@@ -397,7 +413,7 @@ import AppFooter from '../components/AppFooter.vue';
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem 1.25rem;
+  padding: 2rem 30.25rem;
   border-radius: 1.25rem;
   background: white;
   box-shadow: 0 12px 40px rgba(15,36,68,0.15);
@@ -449,10 +465,15 @@ import AppFooter from '../components/AppFooter.vue';
   transition: all 0.25s;
 }
 .team-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(15,36,68,0.11); }
-.team-avatar {
-  width: 4rem; height: 4rem; border-radius: 9999px;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 1rem; font-weight: 900; color: white;
-  letter-spacing: 0.05em;
+.team-avatar-img {
+  width: 9rem;
+  height: 9rem;
+  border-radius: 9999px;
+  object-fit: cover;
+  object-position: center top;
+  border: 3px solid #f1f5f9;
+  box-shadow: 0 4px 12px rgba(15,36,68,0.12);
+  margin: 0 auto 0.5rem auto;
+  display: block;
 }
 </style>
